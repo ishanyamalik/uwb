@@ -1,20 +1,24 @@
 import argparse
 import matplotlib
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 
+matplotlib.use("Agg")
+
+
 def generate_data() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
-    Generate random 3D anchor coordinates, transmitter position and TWR distances.
+    Generate random 3D anchor coordinates, transmitter position and TWR
+    distances.
 
     Returns:
-        tuple: A tuple of (anchors, transmitter_position, true_distances, twr_measurements).
+        tuple: A tuple of (anchors, transmitter_position, true_distances,
+        twr_measurements).
     """
 
     # Randomly choose between 4 to 10 anchors
-    num_anchors = np.random.randint(4, 11)  
-    
+    num_anchors = np.random.randint(4, 11)
+
     # Generate random 3D coordinates for anchors within 50x50x10 meter space
     anchors = np.zeros((num_anchors, 3))
     anchors[:, 0] = np.random.uniform(0, 50, num_anchors)  # x-coordinates
@@ -22,12 +26,11 @@ def generate_data() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     anchors[:, 2] = np.random.uniform(0, 10, num_anchors)  # z-coordinates
 
     # Generate a random true position for the transmitter within the same space
-    transmitter_position = np.array([
-        np.random.uniform(0, 49),
-        np.random.uniform(0, 49),
-        np.random.uniform(0, 2)])
+    transmitter_position = np.array(
+        [np.random.uniform(0, 49), np.random.uniform(0, 49), np.random.uniform(0, 2)]
+    )
 
-    # Calculate true TWR distances with small Gaussian noise (std dev of 10cm) 
+    # Calculate true TWR distances with small Gaussian noise (std dev of 10cm)
     # to simulate measurement errors
     noise_std = 0.1
     true_distances = np.linalg.norm(anchors - transmitter_position, axis=1)
@@ -35,25 +38,31 @@ def generate_data() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
 
     return anchors, transmitter_position, true_distances, twr_measurements
 
-def estimate_transmitter_position_gn(anchors: np.ndarray, twr_measurements: np.ndarray) -> np.ndarray:
+
+def estimate_transmitter_position_gn(
+    anchors: np.ndarray, twr_measurements: np.ndarray
+) -> np.ndarray:
     """
-    Estimate the transmitter position using Gauss-Newton least squares optimization.
+    Estimate the transmitter position using Gauss-Newton least squares
+    optimization.
 
     Args:
         anchors (np.ndarray): 3D coordinates of the anchors.
-        twr_measurements (np.ndarray): Measured distances from anchors to transmitter.
+        twr_measurements (np.ndarray): Measured distances from anchors to
+        transmitter.
 
     Returns:
         np.ndarray: Estimated 3D position of the transmitter.
     """
-    
+
     # Initial guess: centroid of anchors
-    pos = np.mean(anchors, axis=0).astype(float) 
+    pos = np.mean(anchors, axis=0).astype(float)
 
     for _ in range(40):  # Iterate to refine the estimate
         diff = pos - anchors
         distances = np.linalg.norm(diff, axis=1)
-        distances = np.where(distances == 0, 1e-6, distances)  # Avoid division by zero
+        # Avoid division by zero
+        distances = np.where(distances == 0, 1e-6, distances)
         residuals = distances - twr_measurements
         if np.max(np.abs(residuals)) < 1e-6:  # Convergence check
             break
@@ -61,9 +70,12 @@ def estimate_transmitter_position_gn(anchors: np.ndarray, twr_measurements: np.n
         delta, _, _, _ = np.linalg.lstsq(jacobian, -residuals, rcond=None)
         pos += delta  # Update position estimate
 
-    return pos    
+    return pos
 
-def estimate_transmitter_position_lm(anchors: np.ndarray, twr_measurements: np.ndarray) -> np.ndarray:
+
+def estimate_transmitter_position_lm(
+    anchors: np.ndarray, twr_measurements: np.ndarray
+) -> np.ndarray:
     """
     Estimate the transmitter position using Levenberg-Marquardt algorithm.
 
@@ -86,15 +98,17 @@ def estimate_transmitter_position_lm(anchors: np.ndarray, twr_measurements: np.n
 
         if np.max(np.abs(residuals)) < 1e-9:  # Convergence check
             break
-        
+
         jacobian = diff / distances[:, np.newaxis]
         normal_matrix = jacobian.T @ jacobian
         gradient = jacobian.T @ residuals
 
-        if (np.linalg.norm(gradient) < 1e-9):  # Gradient convergence check
+        if np.linalg.norm(gradient) < 1e-9:  # Gradient convergence check
             break
 
-        diag_scaling = np.eye(3) * np.where(np.diag(normal_matrix) > 0, np.diag(normal_matrix), 1.0)
+        diag_scaling = np.eye(3) * np.where(
+            np.diag(normal_matrix) > 0, np.diag(normal_matrix), 1.0
+        )
         damped_matrix = normal_matrix + damping_lambda * diag_scaling
         try:
             delta = np.linalg.solve(damped_matrix, -gradient)
@@ -117,10 +131,18 @@ def estimate_transmitter_position_lm(anchors: np.ndarray, twr_measurements: np.n
             damping_lambda = 10.0
     return pos
 
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Estimate UWB TWR distance measurements.")
-    parser.add_argument("--output_plot", type=str, default="/tmp/uwb.png", help="Output file name for the 3D image")
-    args = parser.parse_args()
+    parser = argparse.ArgumentParser(
+        description="Estimate UWB TWR distance measurements."
+    )
+    parser.add_argument(
+        "--output_plot",
+        type=str,
+        default="/tmp/uwb.png",
+        help="Output file name for the 3D image",
+    )
+    parser.parse_args()
 
     anchors, transmitter_position, true_distances, twr_measurements = generate_data()
 
@@ -134,6 +156,7 @@ def main() -> None:
 
     estimated_position = estimate_transmitter_position_lm(anchors, twr_measurements)
     print("Estimated Transmitter Position (Levenberg-Marquardt):\n", estimated_position)
+
 
 if __name__ == "__main__":
     main()
