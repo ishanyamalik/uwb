@@ -6,10 +6,10 @@ import numpy as np
 matplotlib.use("Agg")
 
 
-def generate_data() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def generate_data() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
-    Generate random 3D anchor coordinates, transmitter position and TWR
-    distances.
+    Generate random 3D anchor coordinates, transmitter position, true distances
+    and TWR distances.
 
     Returns:
         tuple: A tuple of (anchors, transmitter_position, true_distances,
