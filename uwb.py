@@ -153,6 +153,88 @@ def estimate_transmitter_position_scipy(
     return result.x
 
 
+def plot_anchors_and_transmitter(
+    anchors: np.ndarray,
+    true_pos: np.ndarray,
+    estimated_pos_gn: np.ndarray,
+    estimated_pos_lm: np.ndarray,
+    estimated_pos_scipy: np.ndarray,
+    output_file: str,
+) -> None:
+    """
+    Plot the anchors, true transmitter position, and estimated positions in 3D.
+
+    Args:
+        anchors (np.ndarray): 3D coordinates of the anchors.
+        true_pos (np.ndarray): True 3D position of the transmitter.
+        estimated_pos_gn (np.ndarray): Estimated position using Gauss-Newton.
+        estimated_pos_lm (np.ndarray): Estimated position using Levenberg-Marquardt.
+        estimated_pos_scipy (np.ndarray): Estimated position using Scipy LM.
+        output_file (str): Path to save the output plot.
+    """
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.add_subplot(111, projection="3d")
+
+    # Plot anchors
+    ax.scatter(
+        anchors[:, 0],
+        anchors[:, 1],
+        anchors[:, 2],
+        c="blue",
+        marker="^",
+        s=100,
+        label="Anchors",
+    )
+
+    # Plot true transmitter position
+    ax.scatter(
+        true_pos[0],
+        true_pos[1],
+        true_pos[2],
+        c="green",
+        marker="o",
+        s=120,
+        label="True Position",
+    )
+
+    # Plot estimated positions
+    ax.scatter(
+        estimated_pos_gn[0],
+        estimated_pos_gn[1],
+        estimated_pos_gn[2],
+        c="red",
+        marker="x",
+        label="Gauss-Newton Estimate",
+        s=120,
+    )
+    ax.scatter(
+        estimated_pos_lm[0],
+        estimated_pos_lm[1],
+        estimated_pos_lm[2],
+        c="orange",
+        marker="+",
+        label="Levenberg-Marquardt Estimate",
+        s=120,
+    )
+    ax.scatter(
+        estimated_pos_scipy[0],
+        estimated_pos_scipy[1],
+        estimated_pos_scipy[2],
+        c="purple",
+        marker="d",
+        label="Scipy LM Estimate",
+        s=120,
+    )
+
+    ax.set_xlabel("X (m)")
+    ax.set_ylabel("Y (m)")
+    ax.set_zlabel("Z (m)")
+    ax.set_title("UWB TWR Localization")
+    ax.legend()
+    plt.savefig(output_file)
+    plt.close()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Estimate UWB TWR distance measurements."
@@ -163,7 +245,7 @@ def main() -> None:
         default="/tmp/uwb.png",
         help="Output file name for the 3D image",
     )
-    parser.parse_args()
+    args = parser.parse_args()
 
     anchors, transmitter_position, true_distances, twr_measurements = generate_data()
 
@@ -187,6 +269,17 @@ def main() -> None:
 
     estimated_position = estimate_transmitter_position_scipy(anchors, twr_measurements)
     print("Scipy LM Estimate:", estimated_position)
+
+    if args.output_plot:
+        plot_anchors_and_transmitter(
+            anchors,
+            transmitter_position,
+            estimate_transmitter_position_gn(anchors, twr_measurements),
+            estimate_transmitter_position_lm(anchors, twr_measurements),
+            estimate_transmitter_position_scipy(anchors, twr_measurements),
+            args.output_plot,
+        )
+        print(f"3D plot saved to {args.output_plot}")
 
 
 if __name__ == "__main__":
