@@ -2,6 +2,7 @@ import argparse
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+import scipy.optimize
 
 matplotlib.use("Agg")
 
@@ -132,6 +133,26 @@ def estimate_transmitter_position_lm(
     return pos
 
 
+def localization_residuals(
+    transmitter_guess: np.ndarray, anchors: np.ndarray, twr_measurements: np.ndarray
+) -> np.ndarray:
+    calculated_distance = np.linalg.norm(anchors - transmitter_guess, axis=1)
+    return calculated_distance - twr_measurements
+
+
+def estimate_transmitter_position_scipy(
+    anchors: np.ndarray, twr_measurements: np.ndarray
+) -> np.ndarray:
+    initial_guess = np.mean(anchors, axis=0).astype(float)
+    result = scipy.optimize.least_squares(
+        localization_residuals,
+        initial_guess,
+        args=(anchors, twr_measurements),
+        method="lm",
+    )
+    return result.x
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Estimate UWB TWR distance measurements."
@@ -146,16 +167,26 @@ def main() -> None:
 
     anchors, transmitter_position, true_distances, twr_measurements = generate_data()
 
-    print("Anchor Coordinates:\n", anchors)
-    print("Transmitter Position:\n", transmitter_position)
-    print("True TWR Distances:\n", true_distances)
-    print("TWR Measurements:\n", twr_measurements)
+    print(f"\nGenerated {len(anchors)} anchors")
+    np.set_printoptions(precision=4, suppress=True)
+    print("Anchor Coordinates:")
+    for i, anchor in enumerate(anchors):
+        print(
+            f"Anchor {i + 1}: {anchor}"
+            f" | True Distance: {true_distances[i]:.4f}m"
+            f" | TWR Distance: {twr_measurements[i]:.4f}m"
+        )
+
+    print("\nTransmitter Position:", transmitter_position)
 
     estimated_position = estimate_transmitter_position_gn(anchors, twr_measurements)
-    print("Estimated Transmitter Position (Gauss-Newton):\n", estimated_position)
+    print("Gauss-Newton Estimate:", estimated_position)
 
     estimated_position = estimate_transmitter_position_lm(anchors, twr_measurements)
-    print("Estimated Transmitter Position (Levenberg-Marquardt):\n", estimated_position)
+    print("Levenberg-Marquardt Estimate:", estimated_position)
+
+    estimated_position = estimate_transmitter_position_scipy(anchors, twr_measurements)
+    print("Scipy LM Estimate:", estimated_position)
 
 
 if __name__ == "__main__":
