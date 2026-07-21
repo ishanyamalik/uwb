@@ -275,6 +275,7 @@ def main() -> None:
         room_x, room_y, room_z
     )
 
+    print(f"Room Dimensions: X: {room_x} m Y: {room_y} m Z: {room_z} m")
     print(f"\nGenerated {len(anchors)} anchors")
     np.set_printoptions(precision=4, suppress=True)
     print("Anchor Coordinates:")
