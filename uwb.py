@@ -7,11 +7,17 @@ import scipy.optimize
 matplotlib.use("Agg")
 
 
-def generate_data() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def generate_data(
+    room_x: float, room_y: float, room_z: float
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Generate random 3D anchor coordinates, transmitter position, true distances
     and TWR distances.
 
+    Args:
+        room_x (float): Size of the room in the x-direction (meters).
+        room_y (float): Size of the room in the y-direction (meters).
+        room_z (float): Size of the room in the z-direction (meters).
     Returns:
         tuple: A tuple of (anchors, transmitter_position, true_distances,
         twr_measurements).
@@ -20,15 +26,19 @@ def generate_data() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     # Randomly choose between 4 to 10 anchors
     num_anchors = np.random.randint(4, 11)
 
-    # Generate random 3D coordinates for anchors within 50x50x10 meter space
+    # Generate random 3D coordinates for anchors within the specified room dimensions
     anchors = np.zeros((num_anchors, 3))
-    anchors[:, 0] = np.random.uniform(0, 50, num_anchors)  # x-coordinates
-    anchors[:, 1] = np.random.uniform(0, 50, num_anchors)  # y-coordinates
-    anchors[:, 2] = np.random.uniform(0, 10, num_anchors)  # z-coordinates
+    anchors[:, 0] = np.random.uniform(0, room_x, num_anchors)  # x-coordinates
+    anchors[:, 1] = np.random.uniform(0, room_y, num_anchors)  # y-coordinates
+    anchors[:, 2] = np.random.uniform(0, room_z, num_anchors)  # z-coordinates
 
     # Generate a random true position for the transmitter within the same space
     transmitter_position = np.array(
-        [np.random.uniform(0, 49), np.random.uniform(0, 49), np.random.uniform(0, 2)]
+        [
+            np.random.uniform(0, room_x - 1),
+            np.random.uniform(0, room_y - 1),
+            np.random.uniform(0, room_z - 1),
+        ]
     )
 
     # Calculate true TWR distances with small Gaussian noise (std dev of 10cm)
@@ -245,9 +255,25 @@ def main() -> None:
         default="/tmp/uwb.png",
         help="Output file name for the 3D image",
     )
+    parser.add_argument(
+        "--room_x", type=float, default=50.0, help="Room size in x-direction (meters)"
+    )
+    parser.add_argument(
+        "--room_y", type=float, default=50.0, help="Room size in y-direction (meters)"
+    )
+    parser.add_argument(
+        "--room_z", type=float, default=10.0, help="Room size in z-direction (meters)"
+    )
     args = parser.parse_args()
 
-    anchors, transmitter_position, true_distances, twr_measurements = generate_data()
+    # Set the room dimensions
+    room_x = args.room_x
+    room_y = args.room_y
+    room_z = args.room_z
+
+    anchors, transmitter_position, true_distances, twr_measurements = generate_data(
+        room_x, room_y, room_z
+    )
 
     print(f"\nGenerated {len(anchors)} anchors")
     np.set_printoptions(precision=4, suppress=True)
