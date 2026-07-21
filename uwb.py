@@ -3,12 +3,51 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.optimize
+import json
 
 matplotlib.use("Agg")
 
 
+def parse_anchor_coordinates(anchor_str: str) -> np.ndarray:
+    """
+    Parse anchor coordinates from a JSON string.
+    Example: '[[0,0,0], [10,0,0], [0,10,0], [10,10,0]]'
+
+    Args:
+        anchor_str (str): JSON string containing anchor coordinates.
+
+    Returns:
+        np.ndarray: 3D array of anchor coordinates.
+
+    Raises:
+        ValueError: If the JSON string is invalid or contains fewer than 3 anchors.
+    """
+    anchor_str = anchor_str.strip()
+    try:
+        anchor_data = json.loads(anchor_str)
+    except json.JSONDecodeError:
+        raise ValueError("Invalid JSON string for anchor coordinates.")
+
+    if not isinstance(anchor_data, list):
+        raise ValueError("Anchor coordinates must be a list of 3D points.")
+
+    anchors = []
+    for coord in anchor_data:
+        if len(coord) != 3:
+            raise ValueError("Each anchor coordinate must be a 3D point.")
+        anchors.append(coord)
+
+    if len(anchors) < 3:
+        raise ValueError("At least 3 anchors are required.")
+
+    return np.array(anchors, dtype=float)
+
+
 def generate_data(
-    room_x: float, room_y: float, room_z: float
+    room_x: float,
+    room_y: float,
+    room_z: float,
+    anchor_coordinates: np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Generate random 3D anchor coordinates, transmitter position, true distances
@@ -18,19 +57,25 @@ def generate_data(
         room_x (float): Size of the room in the x-direction (meters).
         room_y (float): Size of the room in the y-direction (meters).
         room_z (float): Size of the room in the z-direction (meters).
+        anchor_coordinates (np.ndarray | None): Optional array of anchor coordinates.
+            If provided, these coordinates will be used instead of generating random ones.
     Returns:
         tuple: A tuple of (anchors, transmitter_position, true_distances,
         twr_measurements).
     """
 
-    # Randomly choose between 4 to 10 anchors
-    num_anchors = np.random.randint(4, 11)
+    if anchor_coordinates is not None:
+        anchors = anchor_coordinates
+        num_anchors = len(anchors)
+    else:
+        # Randomly choose between 4 to 10 anchors
+        num_anchors = np.random.randint(4, 11)
 
-    # Generate random 3D coordinates for anchors within the specified room dimensions
-    anchors = np.zeros((num_anchors, 3))
-    anchors[:, 0] = np.random.uniform(0, room_x, num_anchors)  # x-coordinates
-    anchors[:, 1] = np.random.uniform(0, room_y, num_anchors)  # y-coordinates
-    anchors[:, 2] = np.random.uniform(0, room_z, num_anchors)  # z-coordinates
+        # Generate random 3D coordinates for anchors within the specified room dimensions
+        anchors = np.zeros((num_anchors, 3))
+        anchors[:, 0] = np.random.uniform(0, room_x, num_anchors)  # x-coordinates
+        anchors[:, 1] = np.random.uniform(0, room_y, num_anchors)  # y-coordinates
+        anchors[:, 2] = np.random.uniform(0, room_z, num_anchors)  # z-coordinates
 
     # Generate a random true position for the transmitter within the same space
     transmitter_position = np.array(
@@ -264,6 +309,12 @@ def main() -> None:
     parser.add_argument(
         "--room_z", type=float, default=10.0, help="Room size in z-direction (meters)"
     )
+    parser.add_argument(
+        "--anchors",
+        type=str,
+        default="",
+        help="JSON string containing anchor coordinates (e.g., '[[0,0,0], [10,0,0], [0,10,0], [10,10,0]]')",
+    )
     args = parser.parse_args()
 
     # Set the room dimensions
@@ -271,12 +322,18 @@ def main() -> None:
     room_y = args.room_y
     room_z = args.room_z
 
+    anchor_coordinates = None
+    if args.anchors.strip():
+        anchor_coordinates = parse_anchor_coordinates(args.anchors)
     anchors, transmitter_position, true_distances, twr_measurements = generate_data(
-        room_x, room_y, room_z
+        room_x, room_y, room_z, anchor_coordinates
     )
 
     print(f"Room Dimensions: X: {room_x} m Y: {room_y} m Z: {room_z} m")
-    print(f"\nGenerated {len(anchors)} anchors")
+    if anchor_coordinates is not None:
+        print(f"Using provided anchor coordinates: {anchor_coordinates}")
+    else:
+        print(f"\nGenerated {len(anchors)} anchors")
     np.set_printoptions(precision=4, suppress=True)
     print("Anchor Coordinates:")
     for i, anchor in enumerate(anchors):
