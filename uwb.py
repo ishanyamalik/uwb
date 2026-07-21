@@ -25,8 +25,8 @@ def parse_anchor_coordinates(anchor_str: str) -> np.ndarray:
     anchor_str = anchor_str.strip()
     try:
         anchor_data = json.loads(anchor_str)
-    except json.JSONDecodeError:
-        raise ValueError("Invalid JSON string for anchor coordinates.")
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON string for anchor coordinates: {e}")
 
     if not isinstance(anchor_data, list):
         raise ValueError("Anchor coordinates must be a list of 3D points.")

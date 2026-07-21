@@ -1,4 +1,6 @@
+.coverage
 .venv
 .vscode
+*.pyc
 examples
 images
