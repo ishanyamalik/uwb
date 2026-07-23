@@ -1,8 +1,8 @@
 import unittest
-from uwb import parse_anchor_coordinates
+from utils import parse_anchor_coordinates
 
 
-class UWBTest(unittest.TestCase):
+class UtilsTest(unittest.TestCase):
 
     def test_parse_anchor_coordinates(self):
         anchor_coords = "[[0,0,0], [10,0,0], [0,10,0], [10,10,0]]"
