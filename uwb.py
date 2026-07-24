@@ -125,9 +125,10 @@ def main() -> None:
     anchor_coordinates = None
     if args.anchors.strip():
         anchor_coordinates = utils.parse_anchor_coordinates(args.anchors)
-    anchors, transmitter_position, true_distances, twr_measurements = (
-        utils.generate_data(room_x, room_y, room_z, anchor_coordinates)
+    anchors, transmitter_position, true_distances = utils.generate_data(
+        room_x, room_y, room_z, anchor_coordinates
     )
+    twr_measurements = utils.simulate_twr_measurements(anchors, transmitter_position)
 
     print(f"Room Dimensions: X: {room_x} m Y: {room_y} m Z: {room_z} m")
     if anchor_coordinates is not None:

@@ -43,7 +43,7 @@ def generate_data(
     room_y: float,
     room_z: float,
     anchor_coordinates: np.ndarray | None = None,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Generate random 3D anchor coordinates, transmitter position, true distances
     and TWR distances.
@@ -55,8 +55,7 @@ def generate_data(
         anchor_coordinates (np.ndarray | None): Optional array of anchor coordinates.
             If provided, these coordinates will be used instead of generating random ones.
     Returns:
-        tuple: A tuple of (anchors, transmitter_position, true_distances,
-        twr_measurements).
+        tuple: A tuple of (anchors, transmitter_position, true_distances).
     """
 
     if anchor_coordinates is not None:
@@ -81,13 +80,28 @@ def generate_data(
         ]
     )
 
-    # Calculate true TWR distances with small Gaussian noise (std dev of 10cm)
-    # to simulate measurement errors
-    noise_std = 0.1
     true_distances = np.linalg.norm(anchors - transmitter_position, axis=1)
-    twr_measurements = true_distances + np.random.normal(0, noise_std, num_anchors)
 
-    return anchors, transmitter_position, true_distances, twr_measurements
+    return anchors, transmitter_position, true_distances
+
+
+def simulate_twr_measurements(
+    anchors: np.ndarray, transmitter_position: np.ndarray, noise_std: float = 0.1
+) -> np.ndarray:
+    """
+    Simulate TWR measurements with Gaussian noise.
+
+    Args:
+        anchors (np.ndarray): 3D coordinates of the anchors.
+        transmitter_position (np.ndarray): 3D position of the transmitter.
+        noise_std (float): Standard deviation of the Gaussian noise (default: 0.1 meters).
+
+    Returns:
+        np.ndarray: Simulated TWR measurements with noise.
+    """
+    true_distances = np.linalg.norm(anchors - transmitter_position, axis=1)
+    twr_measurements = true_distances + np.random.normal(0, noise_std, len(anchors))
+    return twr_measurements
 
 
 def estimate_transmitter_position_gn(
