@@ -1,4 +1,5 @@
 import argparse
+import time
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -144,16 +145,28 @@ def main() -> None:
 
     print("\nTransmitter Position:", transmitter_position)
 
+    start_time = time.perf_counter()
     gn_position = utils.estimate_transmitter_position_gn(anchors, twr_measurements)
-    print("Gauss-Newton Estimate:", gn_position)
+    exec_time = time.perf_counter() - start_time
+    print(
+        f"Gauss-Newton Estimate: {gn_position} (Execution Time: {exec_time:.6f} seconds)"
+    )
 
+    start_time = time.perf_counter()
     lm_position = utils.estimate_transmitter_position_lm(anchors, twr_measurements)
-    print("Levenberg-Marquardt Estimate:", lm_position)
+    exec_time = time.perf_counter() - start_time
+    print(
+        f"Levenberg-Marquardt Estimate: {lm_position} (Execution Time: {exec_time:.6f} seconds)"
+    )
 
+    start_time = time.perf_counter()
     scipy_position = utils.estimate_transmitter_position_scipy(
         anchors, twr_measurements
     )
-    print("SciPy LM Estimate:", scipy_position)
+    exec_time = time.perf_counter() - start_time
+    print(
+        f"SciPy LM Estimate: {scipy_position} (Execution Time: {exec_time:.6f} seconds)"
+    )
 
     if args.output_plot:
         plot_anchors_and_transmitter(
