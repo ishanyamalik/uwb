@@ -1,7 +1,10 @@
 import argparse
+import time
+
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+
 import utils
 
 matplotlib.use("Agg")
@@ -147,6 +150,8 @@ def main() -> None:
 
     trial_errors = []
     estimated_positions = []
+    start_time = time.perf_counter()
+
     for _ in range(args.num_trials):
         twr_measurements = utils.simulate_twr_measurements(
             anchors, transmitter_position
@@ -157,6 +162,8 @@ def main() -> None:
         error = np.linalg.norm(estimated_position - transmitter_position)
         trial_errors.append(error)
         estimated_positions.append(estimated_position)
+
+    exec_time = time.perf_counter() - start_time
 
     print(f"Room Dimensions: X: {room_x} m Y: {room_y} m Z: {room_z} m")
     if anchor_coordinates is not None:
@@ -186,7 +193,9 @@ def main() -> None:
     avg_error = np.mean(trial_errors)
     avg_estimate = np.mean(estimated_positions, axis=0)
     print(f"Average Error: {avg_error:.4f}m" f" Position: {avg_estimate}")
-
+    print(
+        f"Total time: {exec_time:.6f}s, Avg Time per run: {exec_time/args.num_trials:.6f}s"
+    )
     if args.output_plot:
         plot_anchors_and_transmitter(
             anchors,
