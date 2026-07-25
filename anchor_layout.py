@@ -23,6 +23,9 @@ PRESET_ANCHOR_LAYOUT_DESCRIPTIONS: dict[str, str] = {
     "equilateral_triangle_mesh": (
         "10 Anchors layout arranged in an equilateral triangle mesh pattern."
     ),
+    "center_wall_ceiling": (
+        "5 Anchors layout with 4 anchors on the center of each wall and 1 anchor on the ceiling."
+    ),
     "random": ("Random anchor layout with 4 to 10 anchors."),
 }
 
@@ -114,6 +117,17 @@ def get_preset_anchor_layout(
             ],
             dtype=float,
         )
+    elif layout_name == "center_wall_ceiling":
+        return np.array(
+            [
+                [room_length * 0.5, 0.5, z_mid],  # Front wall center
+                [room_length * 0.5, room_width - 0.5, z_mid],  # Back wall center
+                [0.5, room_width * 0.5, z_mid],  # Left wall center
+                [room_length - 0.5, room_width * 0.5, z_mid],  # Right wall center
+                [room_length * 0.5, room_width * 0.5, z_high],  # Ceiling center
+            ],
+            dtype=float,
+        )
     elif layout_name == "random":
         num_anchors = np.random.randint(4, 11)
         return np.random.rand(num_anchors, 3) * np.array(
@@ -162,7 +176,7 @@ def plot_anchor_layout(
     ax.set_zlabel("Z (Height)")
     ax.set_title(f"Anchor Layout in Room: {layout_name}")
     ax.legend()
-    filename = f"anchor_layout_{layout_name}.png"
+    filename = f"images/anchor_layout_{layout_name}.png"
     print(f"Saving plot to {filename}")
     plt.savefig(filename, dpi=300, bbox_inches="tight")
     plt.close(fig)
