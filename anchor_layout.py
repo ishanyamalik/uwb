@@ -1,5 +1,5 @@
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
 PRESET_ANCHOR_LAYOUT_DESCRIPTIONS: dict[str, str] = {
     "perimeter_corners_cuboid": (
@@ -33,6 +33,7 @@ PRESET_ANCHOR_LAYOUT_DESCRIPTIONS: dict[str, str] = {
 def get_preset_anchor_layout(
     layout_name: str, room_length: float, room_width: float, room_height: float
 ) -> np.ndarray:
+    print(f"Layout: {layout_name}")
     z_low = max(0.5, room_height * 0.1)
     z_mid = room_height * 0.5
     z_high = max(z_low + 0.5, room_height - 0.5)

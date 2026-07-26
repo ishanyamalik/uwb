@@ -5,6 +5,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
+import anchor_layout
 import utils
 
 matplotlib.use("Agg")
@@ -121,16 +122,25 @@ def main() -> None:
     parser.add_argument(
         "--room_z", type=float, default=10.0, help="Room size in z-direction (meters)"
     )
-    parser.add_argument(
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
         "--anchors",
         type=str,
         default="",
         help="JSON string containing anchor coordinates (e.g., '[[0,0,0], [10,0,0], [0,10,0], [10,10,0]]')",
     )
+    group.add_argument(
+        "--anchor_layout",
+        type=str,
+        default="random",
+        help="Valid values="
+        "perimeter_corners_cuboid|max_volume_4anchors|perimeter_staggered_heights|"
+        "convex_polygon_center_elevated|equilateral_triangle_mesh|center_wall_ceiling|random",
+    )
     parser.add_argument(
         "--num_trials",
         type=int,
-        default=100,
+        default=1000,
         help="Number of TWR measurements to estimate median error",
     )
     args = parser.parse_args()
@@ -143,6 +153,10 @@ def main() -> None:
     anchor_coordinates = None
     if args.anchors.strip():
         anchor_coordinates = utils.parse_anchor_coordinates(args.anchors)
+    elif args.anchor_layout:
+        anchor_coordinates = anchor_layout.get_preset_anchor_layout(
+            args.anchor_layout, room_x, room_y, room_z
+        )
 
     anchors, transmitter_position, true_distances = utils.generate_data(
         room_x, room_y, room_z, anchor_coordinates
