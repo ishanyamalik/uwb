@@ -185,9 +185,8 @@ def plot_anchor_layout(
 
 def main() -> None:
     print("Preset Anchor Layout Descriptions:")
-    # Example usage
-    room_length = 50.0
-    room_width = 50.0
+    room_length = 10.0
+    room_width = 10.0
     room_height = 10.0
 
     for layout_name in PRESET_ANCHOR_LAYOUT_DESCRIPTIONS:
