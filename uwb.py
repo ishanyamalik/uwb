@@ -1,8 +1,10 @@
 import argparse
 import time
+
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+
 import utils
 
 matplotlib.use("Agg")
@@ -128,7 +130,7 @@ def main() -> None:
     anchors, transmitter_position, true_distances = utils.generate_data(
         room_x, room_y, room_z, anchor_coordinates
     )
-    twr_measurements = utils.simulate_twr_measurements(anchors, transmitter_position)
+    twr_measurements = utils.simulate_twr_measurements(true_distances)
 
     print(f"Room Dimensions: X: {room_x} m Y: {room_y} m Z: {room_z} m")
     if anchor_coordinates is not None:

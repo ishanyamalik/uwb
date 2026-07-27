@@ -1,6 +1,7 @@
+import json
+
 import numpy as np
 import scipy.optimize
-import json
 
 
 def parse_anchor_coordinates(anchor_str: str) -> np.ndarray:
@@ -72,7 +73,20 @@ def generate_data(
         anchors[:, 2] = np.random.uniform(0, room_z, num_anchors)  # z-coordinates
 
     # Generate a random true position for the transmitter within the same space
-    transmitter_position = np.array(
+    transmitter_position = generate_random_transmitter_position(room_x, room_y, room_z)
+
+    true_distances = get_true_distance(anchors, transmitter_position)
+
+    return anchors, transmitter_position, true_distances
+
+
+def generate_random_transmitter_position(
+    room_x: float,
+    room_y: float,
+    room_z: float,
+) -> np.ndarray:
+    # Generate a random true position for the transmitter within the space
+    return np.array(
         [
             np.random.uniform(0, room_x - 1),
             np.random.uniform(0, room_y - 1),
@@ -80,27 +94,29 @@ def generate_data(
         ]
     )
 
-    true_distances = np.linalg.norm(anchors - transmitter_position, axis=1)
 
-    return anchors, transmitter_position, true_distances
+def get_true_distance(
+    anchors: np.ndarray, transmitter_position: np.ndarray
+) -> np.ndarray:
+    return np.linalg.norm(anchors - transmitter_position, axis=1)
 
 
 def simulate_twr_measurements(
-    anchors: np.ndarray, transmitter_position: np.ndarray, noise_std: float = 0.1
+    true_distances: np.ndarray, noise_std: float = 0.1
 ) -> np.ndarray:
     """
     Simulate TWR measurements with Gaussian noise.
 
     Args:
-        anchors (np.ndarray): 3D coordinates of the anchors.
-        transmitter_position (np.ndarray): 3D position of the transmitter.
+        true_distances (np.ndarray): Distance from anchors to transmitter.
         noise_std (float): Standard deviation of the Gaussian noise (default: 0.1 meters).
 
     Returns:
         np.ndarray: Simulated TWR measurements with noise.
     """
-    true_distances = np.linalg.norm(anchors - transmitter_position, axis=1)
-    twr_measurements = true_distances + np.random.normal(0, noise_std, len(anchors))
+    twr_measurements = true_distances + np.random.normal(
+        0, noise_std, len(true_distances)
+    )
     return twr_measurements
 
 

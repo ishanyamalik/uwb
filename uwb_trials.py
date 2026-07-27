@@ -158,18 +158,18 @@ def main() -> None:
             args.anchor_layout, room_x, room_y, room_z
         )
 
-    anchors, transmitter_position, true_distances = utils.generate_data(
-        room_x, room_y, room_z, anchor_coordinates
+    anchors = anchor_coordinates
+    transmitter_position = utils.generate_random_transmitter_position(
+        room_x, room_y, room_z
     )
+    true_distances = utils.get_true_distance(anchors, transmitter_position)
 
     trial_errors = []
     estimated_positions = []
     start_time = time.perf_counter()
 
     for _ in range(args.num_trials):
-        twr_measurements = utils.simulate_twr_measurements(
-            anchors, transmitter_position
-        )
+        twr_measurements = utils.simulate_twr_measurements(true_distances)
         estimated_position = utils.estimate_transmitter_position_scipy(
             anchors, twr_measurements
         )
