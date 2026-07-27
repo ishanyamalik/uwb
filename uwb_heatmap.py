@@ -41,7 +41,8 @@ def parse_args() -> argparse.Namespace:
     group.add_argument(
         "--anchor_layout",
         type=str,
-        default="random",
+        default="perimeter_corners_cuboid",
+        choices=list(anchor_layout.PRESET_ANCHOR_LAYOUT_DESCRIPTIONS.keys()),
         help="Valid values="
         "perimeter_corners_cuboid|max_volume_4anchors|perimeter_staggered_heights|"
         "convex_polygon_center_elevated|equilateral_triangle_mesh|center_wall_ceiling|random",
