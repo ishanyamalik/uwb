@@ -224,6 +224,12 @@ def estimate_transmitter_position_scipy(
     anchors: np.ndarray, twr_measurements: np.ndarray
 ) -> np.ndarray:
     initial_guess = np.mean(anchors, axis=0).astype(float)
+    return estimate_transmitter_position_scipy_with_initial_guess(anchors, twr_measurements, initial_guess)
+
+
+def estimate_transmitter_position_scipy_with_initial_guess(
+    anchors: np.ndarray, twr_measurements: np.ndarray, initial_guess: np.ndarray
+) -> np.ndarray:
     result = scipy.optimize.least_squares(
         localization_residuals,
         initial_guess,

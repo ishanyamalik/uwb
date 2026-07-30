@@ -50,7 +50,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--num_trials",
         type=int,
-        default=1000,
+        default=100,
         help="Number of TWR measurements to estimate median error",
     )
     return parser.parse_args()
@@ -86,6 +86,7 @@ def main() -> None:
     print(f"Total solves: {total_runs} ({args.num_trials} trials/point)")
     error_grid = np.zeros((y_count, x_count))
     time_grid = np.zeros((y_count, x_count))
+    initial_guess = np.mean(anchors, axis=0).astype(float)
 
     for idx_y, y in enumerate(y_range):
         row_pct = ((idx_y + 1) / y_count) * 100
@@ -97,17 +98,20 @@ def main() -> None:
             transmitter_position = np.array([x, y, transmitter_z])
             true_distances = utils.get_true_distance(anchors, transmitter_position)
             trial_errors = []
-            # estimated_positions = []
+
             start_time = time.perf_counter()
             for _ in range(args.num_trials):
                 twr_measurements = true_distances + np.random.normal(
                     0, 0.1, len(anchors)
                 )
-                estimated_position = utils.estimate_transmitter_position_scipy(
-                    anchors, twr_measurements
+                estimated_position = (
+                    utils.estimate_transmitter_position_scipy_with_initial_guess(
+                        anchors, twr_measurements, initial_guess
+                    )
                 )
                 error = np.linalg.norm(estimated_position - transmitter_position)
                 trial_errors.append(error)
+                initial_guess = estimated_position
             time_grid[idx_y, idx_x] = time.perf_counter() - start_time
             # print(f"time[{idx_y}][{idx_x}] = {time_grid[idx_y, idx_x]}")
             error_grid[idx_y, idx_x] = float(np.median(trial_errors))
