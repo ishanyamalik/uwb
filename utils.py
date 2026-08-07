@@ -220,11 +220,92 @@ def localization_residuals(
     return calculated_distance - twr_measurements
 
 
+def localization_residuals_2d(
+    xy_guess: np.ndarray,
+    anchors: np.ndarray,
+    twr_measurements: np.ndarray,
+    transmitter_z: float = 0.5,
+) -> np.ndarray:
+    """
+    Calculate the residuals for 2D localization given a guess for the transmitter's XY position.
+
+    Args:
+        xy_guess (np.ndarray): A 2D array representing the guessed XY position of the transmitter.
+        anchors (np.ndarray): A 2D array of anchor coordinates.
+        twr_measurements (np.ndarray): A 1D array of measured distances from anchors to the transmitter.
+        transmitter_z (float): The fixed Z-coordinate of the transmitter (default: 0.5).
+
+    Returns:
+        np.ndarray: The residuals between calculated distances and measured distances.
+    """
+    diff_xy = anchors[:, :2] - xy_guess
+    diff_z = anchors[:, 2] - transmitter_z
+    calculated_distance = np.sqrt(np.sum(diff_xy**2, axis=1) + diff_z**2)
+    return calculated_distance - twr_measurements
+
+
+def jacobian_2d(
+    xy_guess: np.ndarray,
+    anchors: np.ndarray,
+    twr_measurements: np.ndarray,
+    transmitter_z: float = 0.5,
+) -> np.ndarray:
+    """
+    Calculate the Jacobian matrix for 2D localization given a guess for the transmitter's XY position.
+
+    Args:
+        xy_guess (np.ndarray): A 2D array representing the guessed XY position of the transmitter.
+        anchors (np.ndarray): A 2D array of anchor coordinates.
+        twr_measurements (np.ndarray): A 1D array of measured distances from anchors to the transmitter.
+        transmitter_z (float): The fixed Z-coordinate of the transmitter (default: 0.5).
+
+    Returns:
+        np.ndarray: The Jacobian matrix of partial derivatives with respect to the XY position.
+    """
+    diff_xy = xy_guess - anchors[:, :2]
+    diff_z = transmitter_z - anchors[:, 2]
+    distances = np.sqrt(np.sum(diff_xy**2, axis=1) + diff_z**2)
+    distances = np.where(distances == 0, 1e-6, distances)  # Avoid division by zero
+    jacobian = diff_xy / distances[:, np.newaxis]
+    return jacobian
+
+
+def estimate_transmitter_position_scipy_2d(
+    anchors: np.ndarray,
+    twr_measurements: np.ndarray,
+    initial_guess: np.ndarray,
+    transmitter_z: float = 0.5,
+) -> np.ndarray:
+    """
+    Estimate the transmitter position using SciPy's least squares optimization for 2D localization.
+
+    Args:
+        anchors (np.ndarray): A 2D array of anchor coordinates.
+        twr_measurements (np.ndarray): A 1D array of measured distances from anchors to the transmitter.
+        initial_guess (np.ndarray): A 2D array representing the initial guess for the transmitter's XY position.
+        transmitter_z (float): The fixed Z-coordinate of the transmitter (default: 0.5).
+
+    Returns:
+        np.ndarray: The estimated 3D position of the transmitter.
+    """
+    xy_guess = np.array(initial_guess[:2], dtype=float)
+    result = scipy.optimize.least_squares(
+        localization_residuals_2d,
+        xy_guess,
+        jac=jacobian_2d,
+        args=(anchors, twr_measurements, transmitter_z),
+        method="lm",
+    )
+    return np.array([result.x[0], result.x[1], transmitter_z])
+
+
 def estimate_transmitter_position_scipy(
     anchors: np.ndarray, twr_measurements: np.ndarray
 ) -> np.ndarray:
     initial_guess = np.mean(anchors, axis=0).astype(float)
-    return estimate_transmitter_position_scipy_with_initial_guess(anchors, twr_measurements, initial_guess)
+    return estimate_transmitter_position_scipy_with_initial_guess(
+        anchors, twr_measurements, initial_guess
+    )
 
 
 def estimate_transmitter_position_scipy_with_initial_guess(
