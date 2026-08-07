@@ -91,7 +91,7 @@ def main() -> None:
     for idx_y, y in enumerate(y_range):
         row_pct = ((idx_y + 1) / y_count) * 100
         print(
-            f"Simulating grid row {idx_y+1}/{y_count} (Y = {y:.1f})m"
+            f"Simulating grid row {idx_y+1}/{y_count} (Y = {y:.1f}m)"
             f" [{row_pct:.1f}% complete]..."
         )
         for idx_x, x in enumerate(x_range):
