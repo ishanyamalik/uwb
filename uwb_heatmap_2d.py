@@ -17,12 +17,6 @@ def parse_args() -> argparse.Namespace:
         description="Estimate UWB TWR distance measurements."
     )
     parser.add_argument(
-        "--output_plot",
-        type=str,
-        default="/tmp/uwb.png",
-        help="Output file name for the 3D image",
-    )
-    parser.add_argument(
         "--room_x", type=float, default=10.0, help="Room size in x-direction (meters)"
     )
     parser.add_argument(
