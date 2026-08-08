@@ -47,6 +47,18 @@ def parse_args() -> argparse.Namespace:
         default=100,
         help="Number of TWR measurements to estimate median error",
     )
+    parser.add_argument(
+        "--transmitter_z",
+        type=float,
+        default=0.5,
+        help="Transmitter height (meters)",
+    )
+    parser.add_argument(
+        "--grid_increment",
+        type=float,
+        default=0.5,
+        help="Grid increment for x and y (meters)",
+    )
     return parser.parse_args()
 
 
@@ -67,8 +79,8 @@ def main() -> None:
         )
     anchors = anchor_coordinates
 
-    increment = 0.5
-    transmitter_z = 0.5
+    increment = args.grid_increment
+    transmitter_z = args.transmitter_z
     x_range = np.arange(0, room_x + increment, increment)
     y_range = np.arange(0, room_y + increment, increment)
     x_count = len(x_range)
