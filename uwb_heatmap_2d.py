@@ -1,5 +1,6 @@
 import argparse
 import time
+from pathlib import Path
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -171,9 +172,10 @@ def main() -> None:
     plt.ylabel("Y (meters)")
     plt.tight_layout()
 
-    filename = "/tmp/uwb_heatmap.png"
+    current_file = Path(__file__).stem
+    filename = f"/tmp/{current_file}.png"
     if args.anchor_layout:
-        filename = f"/tmp/uwb_heatmap_{args.anchor_layout}.png"
+        filename = f"/tmp/{current_file}_{args.anchor_layout}.png"
     plt.savefig(filename)
     plt.close()
     print(f"Heatmap saved to {filename}")
