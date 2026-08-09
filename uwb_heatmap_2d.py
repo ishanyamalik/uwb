@@ -165,7 +165,7 @@ def main() -> None:
 
     plt.title(
         "UWB Localization Error Heatmap\nRoom:"
-        f" {room_x}m x {room_y}m x {room_z}m | Transmitter Height : 0.5m | Trials:{args.num_trials}",
+        f" {room_x}m x {room_y}m x {room_z}m | Transmitter Height : {transmitter_z}m | Trials:{args.num_trials}",
         fontsize=13,
     )
     plt.xlabel("X (meters)")
