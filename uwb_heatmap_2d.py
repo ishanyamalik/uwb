@@ -128,6 +128,8 @@ def main() -> None:
         print(f"Anchor {i + 1}: {anchor}")
 
     print("\nNumber of TWR Measurements:", args.num_trials)
+    print(f"Grid Increment: {args.grid_increment} meters")
+    print(f"Transmitter Height: {transmitter_z} meters")
 
     min_error = np.min(error_grid)
     max_error = np.max(error_grid)

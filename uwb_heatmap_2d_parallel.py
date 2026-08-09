@@ -1,8 +1,9 @@
 import argparse
-from pathlib import Path
 import time
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from functools import partial
+from pathlib import Path
 
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
@@ -10,12 +11,10 @@ import seaborn as sns
 import anchor_layout
 import utils
 
-matplotlib.use("Agg")
-
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Estimate UWB TWR distance measurements."
+        description="Estimate UWB TWR distance measurements in parallel."
     )
     parser.add_argument(
         "--room_x", type=float, default=10.0, help="Room size in x-direction (meters)"
@@ -60,30 +59,56 @@ def parse_args() -> argparse.Namespace:
         default=0.5,
         help="Grid increment for x and y (meters)",
     )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=None,
+        help="Number of worker processes (defaults to the available CPUs)",
+    )
     return parser.parse_args()
+
+
+def evaluate_grid_point(
+    idx_y: int,
+    idx_x: int,
+    x: float,
+    y: float,
+    anchors: np.ndarray,
+    num_trials: int,
+    transmitter_z: float,
+) -> tuple[int, int, float, float]:
+    transmitter_position = np.array([x, y, transmitter_z])
+    true_distances = utils.get_true_distance(anchors, transmitter_position)
+    initial_guess = np.mean(anchors, axis=0).astype(float)
+    trial_errors = []
+
+    start_time = time.perf_counter()
+    for _ in range(num_trials):
+        twr_measurements = true_distances + np.random.normal(0, 0.1, len(anchors))
+        estimated_position = utils.estimate_transmitter_position_scipy_2d(
+            anchors, twr_measurements, initial_guess, transmitter_z
+        )
+        trial_errors.append(np.linalg.norm(estimated_position - transmitter_position))
+        initial_guess = estimated_position
+
+    elapsed = time.perf_counter() - start_time
+    return idx_y, idx_x, float(np.median(trial_errors)), elapsed
 
 
 def main() -> None:
     args = parse_args()
 
-    # Set the room dimensions
-    room_x = args.room_x
-    room_y = args.room_y
-    room_z = args.room_z
-
-    anchor_coordinates = None
     if args.anchors.strip():
-        anchor_coordinates = utils.parse_anchor_coordinates(args.anchors)
-    elif args.anchor_layout:
-        anchor_coordinates = anchor_layout.get_preset_anchor_layout(
-            args.anchor_layout, room_x, room_y, room_z
+        anchors = utils.parse_anchor_coordinates(args.anchors)
+    else:
+        anchors = anchor_layout.get_preset_anchor_layout(
+            args.anchor_layout, args.room_x, args.room_y, args.room_z
         )
-    anchors = anchor_coordinates
 
     increment = args.grid_increment
     transmitter_z = args.transmitter_z
-    x_range = np.arange(0, room_x + increment, increment)
-    y_range = np.arange(0, room_y + increment, increment)
+    x_range = np.arange(0, args.room_x + increment, increment)
+    y_range = np.arange(0, args.room_y + increment, increment)
     x_count = len(x_range)
     y_count = len(y_range)
     total_points = x_count * y_count
@@ -93,37 +118,29 @@ def main() -> None:
     print(f"Total solves: {total_runs} ({args.num_trials} trials/point)")
     error_grid = np.zeros((y_count, x_count))
     time_grid = np.zeros((y_count, x_count))
-    initial_guess = np.mean(anchors, axis=0).astype(float)
+    tasks = [
+        (idx_y, idx_x, x, y)
+        for idx_y, y in enumerate(y_range)
+        for idx_x, x in enumerate(x_range)
+    ]
+    evaluate_point = partial(
+        evaluate_grid_point,
+        anchors=anchors,
+        num_trials=args.num_trials,
+        transmitter_z=transmitter_z,
+    )
 
-    for idx_y, y in enumerate(y_range):
-        row_pct = ((idx_y + 1) / y_count) * 100
-        print(
-            f"Simulating grid row {idx_y+1}/{y_count} (Y = {y:.1f}m)"
-            f" [{row_pct:.1f}% complete]..."
-        )
-        for idx_x, x in enumerate(x_range):
-            transmitter_position = np.array([x, y, transmitter_z])
-            true_distances = utils.get_true_distance(anchors, transmitter_position)
-            trial_errors = []
+    start_time = time.perf_counter()
+    with ProcessPoolExecutor(max_workers=args.workers) as executor:
+        futures = [executor.submit(evaluate_point, *task) for task in tasks]
+        for completed, future in enumerate(as_completed(futures), 1):
+            idx_y, idx_x, median_error, elapsed = future.result()
+            error_grid[idx_y, idx_x] = median_error
+            time_grid[idx_y, idx_x] = elapsed
+            # print(f"Completed grid point {completed}/{total_points}")
+    total_elapsed = time.perf_counter() - start_time
 
-            start_time = time.perf_counter()
-            for _ in range(args.num_trials):
-                twr_measurements = true_distances + np.random.normal(
-                    0, 0.1, len(anchors)
-                )
-                estimated_position = (
-                    utils.estimate_transmitter_position_scipy_with_initial_guess(
-                        anchors, twr_measurements, initial_guess
-                    )
-                )
-                error = np.linalg.norm(estimated_position - transmitter_position)
-                trial_errors.append(error)
-                initial_guess = estimated_position
-            time_grid[idx_y, idx_x] = time.perf_counter() - start_time
-            # print(f"time[{idx_y}][{idx_x}] = {time_grid[idx_y, idx_x]}")
-            error_grid[idx_y, idx_x] = float(np.median(trial_errors))
-
-    print(f"Room Dimensions: X: {room_x} m Y: {room_y} m Z: {room_z} m")
+    print(f"Room Dimensions: X: {args.room_x} m Y: {args.room_y} m Z: {args.room_z} m")
     np.set_printoptions(precision=4, suppress=True)
     print("Anchor Coordinates:")
     for i, anchor in enumerate(anchors):
@@ -133,23 +150,22 @@ def main() -> None:
     print(f"Grid Increment: {args.grid_increment} meters")
     print(f"Transmitter Height: {transmitter_z} meters")
 
-    min_error = np.min(error_grid)
-    max_error = np.max(error_grid)
-    avg_error = np.mean(error_grid)
-    median_error = np.median(error_grid)
-
-    min_time = np.min(time_grid)
-    max_time = np.max(time_grid)
-    avg_time = np.mean(time_grid)
-    median_time = np.median(time_grid)
     print(f"Total time: {np.sum(time_grid)}s")
-    print(f"Minimum Error: {min_error:.2f}m Minimum Time: {min_time:.4f}s")
-    print(f"Maximum Error: {max_error:.2f}m Maximum Time: {max_time:.4f}s")
-    print(f"Average Error: {avg_error:.2f}m Average Time: {avg_time:.4f}s")
-    print(f"Median Error: {median_error:.2f}m Median Time: {median_time:.4f}s")
+    print(f"Total elapsed time for all grid points: {total_elapsed:.2f}s")
+    print(
+        f"Minimum Error: {np.min(error_grid):.2f}m Minimum Time: {np.min(time_grid):.4f}s"
+    )
+    print(
+        f"Maximum Error: {np.max(error_grid):.2f}m Maximum Time: {np.max(time_grid):.4f}s"
+    )
+    print(
+        f"Average Error: {np.mean(error_grid):.2f}m Average Time: {np.mean(time_grid):.4f}s"
+    )
+    print(
+        f"Median Error: {np.median(error_grid):.2f}m Median Time: {np.median(time_grid):.4f}s"
+    )
 
-    cap_value = 0.5
-    visual_grid = np.clip(error_grid, 0, cap_value)
+    visual_grid = np.clip(error_grid, 0, 0.5)
     plt.figure(figsize=(10, 8))
     ax = sns.heatmap(
         visual_grid,
@@ -164,12 +180,11 @@ def main() -> None:
     ax.set_yticks(np.arange(0, y_count, y_ticks_step))
     ax.set_xticklabels(np.round(x_range[::x_ticks_step], 1))
     ax.set_yticklabels(np.round(y_range[::y_ticks_step], 1))
-
-    plt.gca().invert_yaxis()
-
+    ax.invert_yaxis()
     plt.title(
-        "UWB Localization Error Heatmap\nRoom:"
-        f" {room_x}m x {room_y}m x {room_z}m | Transmitter Height : {transmitter_z}m | Trials:{args.num_trials}",
+        "UWB Localization Error Heatmap (submit)\nRoom:"
+        f" {args.room_x}m x {args.room_y}m x {args.room_z}m | "
+        f"Transmitter Height: {transmitter_z}m | Trials: {args.num_trials}",
         fontsize=13,
     )
     plt.xlabel("X (meters)")
