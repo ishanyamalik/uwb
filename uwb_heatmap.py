@@ -177,7 +177,7 @@ def main() -> None:
     current_file = Path(__file__).stem
     filename = f"/tmp/{current_file}.png"
     if args.anchor_layout:
-        filename = f"/tmp/{current_file}_{args.anchor_layout}.png"
+        filename = f"/tmp/{current_file}_{args.anchor_layout}_{args.num_trials}.png"
     plt.savefig(filename)
     plt.close()
     print(f"Heatmap saved to {filename}")
