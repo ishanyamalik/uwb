@@ -162,6 +162,8 @@ def generate_heatmap(data: dict) -> bytes:
         yticklabels=np.round(y_range, 1),
         cbar_kws={"label": "Median Localization Error (meters)"},
         ax=axis,
+        vmin=0.05,
+        vmax=0.15,
     )
     axis.invert_yaxis()
     axis.set_title(

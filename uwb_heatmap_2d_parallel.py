@@ -173,6 +173,8 @@ def main() -> None:
         xticklabels=np.round(x_range, 1),
         yticklabels=np.round(y_range, 1),
         cbar_kws={"label": "Median Localization Error (meters)"},
+        vmin=0.05,
+        vmax=0.15,
     )
     x_ticks_step = max(1, x_count // 10)
     y_ticks_step = max(1, y_count // 10)
