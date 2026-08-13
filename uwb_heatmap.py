@@ -93,10 +93,10 @@ def main() -> None:
     print(f"Total solves: {total_runs} ({args.num_trials} trials/point)")
     error_grid = np.zeros((y_count, x_count))
     time_grid = np.zeros((y_count, x_count))
-    initial_guess = np.mean(anchors, axis=0).astype(float)
 
     for idx_y, y in enumerate(y_range):
         row_pct = ((idx_y + 1) / y_count) * 100
+        initial_guess = np.mean(anchors, axis=0).astype(float)
         print(
             f"Simulating grid row {idx_y+1}/{y_count} (Y = {y:.1f}m)"
             f" [{row_pct:.1f}% complete]..."
