@@ -1,7 +1,6 @@
 import argparse
 import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from functools import partial
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -96,8 +95,10 @@ def evaluate_grid_point(
 
 
 def main() -> None:
+    # Parse command-line arguments
     args = parse_args()
 
+    # Initialize anchor coordinates based on user input or preset layout
     if args.anchors.strip():
         anchors = utils.parse_anchor_coordinates(args.anchors)
     else:
@@ -105,34 +106,56 @@ def main() -> None:
             args.anchor_layout, args.room_x, args.room_y, args.room_z
         )
 
+    # Initialize increment and transmitter height
     increment = args.grid_increment
     transmitter_z = args.transmitter_z
+
+    # Initialize x and y ranges based on room dimensions and increment
     x_range = np.arange(0, args.room_x + increment, increment)
     y_range = np.arange(0, args.room_y + increment, increment)
+
+    # Calculate the number of x and y intervals
     x_count = len(x_range)
     y_count = len(y_range)
+
+    # Calculate total points and total runs for the grid
     total_points = x_count * y_count
     total_runs = total_points * args.num_trials
-
     print(f"Generating grid: {x_count}x{y_count} ({total_points} evaluation points)")
     print(f"Total solves: {total_runs} ({args.num_trials} trials/point)")
-    error_grid = np.zeros((y_count, x_count))
-    time_grid = np.zeros((y_count, x_count))
-    tasks = [
-        (idx_y, idx_x, x, y)
-        for idx_y, y in enumerate(y_range)
-        for idx_x, x in enumerate(x_range)
-    ]
-    evaluate_point = partial(
-        evaluate_grid_point,
-        anchors=anchors,
-        num_trials=args.num_trials,
-        transmitter_z=transmitter_z,
-    )
 
+    # Initialize 2D arrays to store median errors and elapsed times for each grid point
+    error_grid = np.zeros(shape=(y_count, x_count))
+    time_grid = np.zeros(shape=(y_count, x_count))
+
+    # Tasks is an array of tuples containing the grid point indices and coordinates for parallel processing
+    tasks = []
+
+    # Populate the tasks list with grid point indices and coordinates
+    for idx_y, y in enumerate(y_range):
+        for idx_x, x in enumerate(x_range):
+            tasks.append((idx_y, idx_x, x, y))
+
+    
     start_time = time.perf_counter()
     with ProcessPoolExecutor(max_workers=args.workers) as executor:
-        futures = [executor.submit(evaluate_point, *task) for task in tasks]
+
+        # Submit tasks to the executor for parallel processing
+        futures = [
+            executor.submit(
+                evaluate_grid_point,
+                idx_y,
+                idx_x,
+                x,
+                y,
+                anchors,
+                args.num_trials,
+                transmitter_z,
+            )
+            for idx_y, idx_x, x, y in tasks
+        ]
+
+        # Process the completed futures as they finish and update the error and time grids
         for completed, future in enumerate(as_completed(futures), 1):
             idx_y, idx_x, median_error, elapsed = future.result()
             error_grid[idx_y, idx_x] = median_error
