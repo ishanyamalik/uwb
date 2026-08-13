@@ -68,6 +68,10 @@ def parse_args() -> argparse.Namespace:
 
 
 def evaluate_grid_point(
+
+    # Function to evaluate a single grid point for UWB localization error
+
+    # Parameters:
     idx_y: int,
     idx_x: int,
     x: float,
@@ -76,11 +80,17 @@ def evaluate_grid_point(
     num_trials: int,
     transmitter_z: float,
 ) -> tuple[int, int, float, float]:
+
+    # Calculate the true distances from the anchors to the transmitter position
     transmitter_position = np.array([x, y, transmitter_z])
     true_distances = utils.get_true_distance(anchors, transmitter_position)
+
+    # Set the initial guess for the transmitter position as the mean of the anchor coordinates
     initial_guess = np.mean(anchors, axis=0).astype(float)
     trial_errors = []
 
+
+    # Perform multiple trials to estimate the median localization error at this grid point
     start_time = time.perf_counter()
     for _ in range(num_trials):
         twr_measurements = true_distances + np.random.normal(0, 0.1, len(anchors))
@@ -90,6 +100,7 @@ def evaluate_grid_point(
         trial_errors.append(np.linalg.norm(estimated_position - transmitter_position))
         initial_guess = estimated_position
 
+    # Calculate the elapsed time for all trials at this grid point
     elapsed = time.perf_counter() - start_time
     return idx_y, idx_x, float(np.median(trial_errors)), elapsed
 
