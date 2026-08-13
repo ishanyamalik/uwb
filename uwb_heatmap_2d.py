@@ -64,6 +64,8 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+
+    # Parse command-line arguments
     args = parse_args()
 
     # Set the room dimensions
@@ -71,6 +73,7 @@ def main() -> None:
     room_y = args.room_y
     room_z = args.room_z
 
+    # Determine anchor coordinates based on user input or preset layout
     anchor_coordinates = None
     if args.anchors.strip():
         anchor_coordinates = utils.parse_anchor_coordinates(args.anchors)
@@ -80,10 +83,13 @@ def main() -> None:
         )
     anchors = anchor_coordinates
 
+    # Initialize increment, transmitter height, and grid ranges
     increment = args.grid_increment
     transmitter_z = args.transmitter_z
     x_range = np.arange(0, room_x + increment, increment)
     y_range = np.arange(0, room_y + increment, increment)
+
+    # Initialize grid dimensions, total points, and total runs
     x_count = len(x_range)
     y_count = len(y_range)
     total_points = x_count * y_count
@@ -91,16 +97,25 @@ def main() -> None:
 
     print(f"Generating grid: {x_count}x{y_count} ({total_points} evaluation points)")
     print(f"Total solves: {total_runs} ({args.num_trials} trials/point)")
+
+    # Initialize error and time grids to store results
     error_grid = np.zeros((y_count, x_count))
     time_grid = np.zeros((y_count, x_count))
 
     for idx_y, y in enumerate(y_range):
+
+        # Calculate the percentage of completion for the current row
         row_pct = ((idx_y + 1) / y_count) * 100
+
+        # Set the initial guess for the transmitter position as the mean of the anchor coordinates
         initial_guess = np.mean(anchors, axis=0).astype(float)
+
         print(
             f"Simulating grid row {idx_y+1}/{y_count} (Y = {y:.1f}m)"
             f" [{row_pct:.1f}% complete]..."
         )
+
+        # Evaluate each grid point in the current row for UWB localization error
         for idx_x, x in enumerate(x_range):
             transmitter_position = np.array([x, y, transmitter_z])
             true_distances = utils.get_true_distance(anchors, transmitter_position)
@@ -131,6 +146,7 @@ def main() -> None:
     print(f"Grid Increment: {args.grid_increment} meters")
     print(f"Transmitter Height: {transmitter_z} meters")
 
+    # Calculate and display statistics for the error and time grids
     min_error = np.min(error_grid)
     max_error = np.max(error_grid)
     avg_error = np.mean(error_grid)
