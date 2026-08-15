@@ -2,16 +2,20 @@
 
 import json
 import math
+import os
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from io import BytesIO
 
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-from flask import Flask, Response, request
+from flask import Flask, Response, request, send_from_directory
 
 import anchor_layout
 from uwb_heatmap_2d_parallel import evaluate_grid_point
+
+matplotlib.use('Agg')  # Switches to a non-interactive backend
 
 # if (image.src.startsWith("blob:")) URL.revokeObjectURL(image.src);
 
@@ -182,6 +186,15 @@ def generate_heatmap(data: dict) -> bytes:
 @app.get("/")
 def index() -> Response:
     return Response(render_page(), mimetype="text/html")
+
+
+@app.route("/favicon.ico")
+def favicon():
+    return send_from_directory(
+        os.path.join(app.root_path, "static"),
+        "favicon.ico",
+        mimetype="image/vnd.microsoft.icon",
+    )
 
 
 @app.post("/heatmap")
