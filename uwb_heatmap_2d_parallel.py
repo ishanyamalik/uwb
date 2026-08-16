@@ -89,7 +89,6 @@ def evaluate_grid_point(
     initial_guess = np.mean(anchors, axis=0).astype(float)
     trial_errors = []
 
-
     # Perform multiple trials to estimate the median localization error at this grid point
     start_time = time.perf_counter()
     for _ in range(num_trials):
@@ -147,7 +146,6 @@ def main() -> None:
         for idx_x, x in enumerate(x_range):
             tasks.append((idx_y, idx_x, x, y))
 
-    
     start_time = time.perf_counter()
     with ProcessPoolExecutor(max_workers=args.workers) as executor:
 
